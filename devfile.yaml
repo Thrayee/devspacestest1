@@ -1,0 +1,54 @@
+schemaVersion: 2.2.0
+metadata:
+  name: kafka-flink-devspace
+  version: 1.0.0
+  displayName: Kafka + Flink DevSpace
+  description: A Dev Spaces workspace with Apache Kafka and Apache Flink
+components:
+  - name: tools
+    container:
+      image: eclipse-temurin:17-jdk
+      memoryLimit: 2Gi
+      cpuLimit: 1
+      mountSources: true
+      command:
+        - bash
+      args:
+        - "-c"
+        - |
+          # Install curl, tar, and unzip
+          apt-get update && apt-get install -y curl tar unzip wget
+
+          # Download Kafka
+          curl -LO https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz
+          tar -xzf kafka_2.13-3.7.0.tgz
+
+          # Download Flink
+          curl -LO https://downloads.apache.org/flink/flink-1.18.0/flink-1.18.0-bin-scala_2.12.tgz
+          tar -xzf flink-1.18.0-bin-scala_2.12.tgz
+
+          # Run Zookeeper and Kafka in background
+          nohup kafka_2.13-3.7.0/bin/zookeeper-server-start.sh kafka_2.13-3.7.0/config/zookeeper.properties > zookeeper.log 2>&1 &
+
+          sleep 5
+
+          nohup kafka_2.13-3.7.0/bin/kafka-server-start.sh kafka_2.13-3.7.0/config/server.properties > kafka.log 2>&1 &
+
+          # Start Flink
+          flink-1.18.0/bin/start-cluster.sh
+
+          tail -f /dev/null
+      endpoints:
+        - name: flink-ui
+          targetPort: 8081
+          exposure: public
+          path: /
+
+commands:
+  - id: start-kafka-flink
+    exec:
+      component: tools
+      commandLine: echo "Kafka and Flink started automatically in container"
+      group:
+        kind: build
+        isDefault: true
